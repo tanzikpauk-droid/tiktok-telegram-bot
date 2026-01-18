@@ -2,23 +2,25 @@ import os
 import re
 import yt_dlp
 from telegram import Update
-from telegram.ext import Updater, MessageHandler, Filters, CallbackContext
+from telegram.ext import ApplicationBuilder, ContextTypes, MessageHandler, CommandHandler, filters
 
-TOKEN = os.getenv("BOT_TOKEN")
+TOKEN = os.environ.get("BOT_TOKEN")
 
-if not TOKEN:
-    raise RuntimeError("BOT_TOKEN is not set")
+TIKTOK_REGEX = r"https?://(www\.)?tiktok\.com/.*"
 
-TIKTOK_REGEX = r"(https?://(www\.)?tiktok\.com/.+/video/\d+)"
+async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    await update.message.reply_text(
+        "👋 Отправь ссылку на TikTok — я пришлю видео для скачивания"
+    )
 
-def handle_message(update: Update, context: CallbackContext):
+async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
     text = update.message.text
 
-    if not text or not re.search(TIKTOK_REGEX, text):
-        update.message.reply_text("❌ Это не ссылка на TikTok видео")
+    if not re.search(TIKTOK_REGEX, text):
+        await update.message.reply_text("❌ Это не ссылка TikTok")
         return
 
-    update.message.reply_text("⏳ Скачиваю видео...")
+    await update.message.reply_text("⏳ Скачиваю видео...")
 
     ydl_opts = {
         "outtmpl": "video.%(ext)s",
@@ -31,25 +33,20 @@ def handle_message(update: Update, context: CallbackContext):
             info = ydl.extract_info(text, download=True)
             filename = ydl.prepare_filename(info)
 
-        with open(filename, "rb") as f:
-            update.message.reply_video(video=f)
-
+        await update.message.reply_video(video=open(filename, "rb"))
         os.remove(filename)
 
     except Exception as e:
-        update.message.reply_text("⚠️ Ошибка при скачивании видео")
+        await update.message.reply_text(f"⚠️ Ошибка: {e}")
 
-def start(update: Update, context: CallbackContext):
-    update.message.reply_text(
-        "👋 Отправь ссылку на TikTok — я пришлю видео для скачивания 🎥"
-    )
+def main():
+    app = ApplicationBuilder().token(TOKEN).build()
 
-updater = Updater(TOKEN, use_context=True)
-dp = updater.dispatcher
+    app.add_handler(CommandHandler("start", start))
+    app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, handle_message))
 
-dp.add_handler(MessageHandler(Filters.text & ~Filters.command, handle_message))
-dp.add_handler(MessageHandler(Filters.command, start))
+    app.run_polling()
 
-print("🤖 Бот запущен")
-updater.start_polling()
-updater.idle()
+if __name__ == "__main__":
+    main()
+    
