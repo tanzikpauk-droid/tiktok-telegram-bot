@@ -4,6 +4,7 @@ import yt_dlp
 from telegram import Update
 from telegram.ext import ApplicationBuilder, MessageHandler, ContextTypes, filters
 import os
+
 TOKEN = os.getenv("BOT_TOKEN")
 
 TIKTOK_REGEX = r"(https?://(www\.)?tiktok\.com/.+/video/\d+)"
