@@ -6,6 +6,9 @@ from telegram.ext import Updater, MessageHandler, Filters, CallbackContext
 
 TOKEN = os.getenv("BOT_TOKEN")
 
+if not TOKEN:
+    raise RuntimeError("BOT_TOKEN is not set")
+
 TIKTOK_REGEX = r"(https?://(www\.)?tiktok\.com/.+/video/\d+)"
 
 def handle_message(update: Update, context: CallbackContext):
@@ -33,7 +36,7 @@ def handle_message(update: Update, context: CallbackContext):
 
         os.remove(filename)
 
-    except Exception:
+    except Exception as e:
         update.message.reply_text("⚠️ Ошибка при скачивании видео")
 
 def start(update: Update, context: CallbackContext):
