@@ -2,20 +2,20 @@ import os
 import re
 import yt_dlp
 from telegram import Update
-from telegram.ext import ApplicationBuilder, MessageHandler, ContextTypes, filters
+from telegram.ext import Updater, MessageHandler, Filters, CallbackContext
 
 TOKEN = os.getenv("BOT_TOKEN")
 
 TIKTOK_REGEX = r"(https?://(www\.)?tiktok\.com/.+/video/\d+)"
 
-async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
+def handle_message(update: Update, context: CallbackContext):
     text = update.message.text
 
     if not text or not re.search(TIKTOK_REGEX, text):
-        await update.message.reply_text("❌ Это не ссылка на TikTok видео")
+        update.message.reply_text("❌ Это не ссылка на TikTok видео")
         return
 
-    await update.message.reply_text("⏳ Скачиваю видео...")
+    update.message.reply_text("⏳ Скачиваю видео...")
 
     ydl_opts = {
         "outtmpl": "video.%(ext)s",
@@ -29,21 +29,24 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
             filename = ydl.prepare_filename(info)
 
         with open(filename, "rb") as f:
-            await update.message.reply_video(video=f)
+            update.message.reply_video(video=f)
 
         os.remove(filename)
 
-    except Exception as e:
-        await update.message.reply_text("⚠️ Ошибка при скачивании видео")
+    except Exception:
+        update.message.reply_text("⚠️ Ошибка при скачивании видео")
 
-async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    await update.message.reply_text(
+def start(update: Update, context: CallbackContext):
+    update.message.reply_text(
         "👋 Отправь ссылку на TikTok — я пришлю видео для скачивания 🎥"
     )
 
-app = ApplicationBuilder().token(TOKEN).build()
-app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, handle_message))
-app.add_handler(MessageHandler(filters.COMMAND, start))
+updater = Updater(TOKEN, use_context=True)
+dp = updater.dispatcher
+
+dp.add_handler(MessageHandler(Filters.text & ~Filters.command, handle_message))
+dp.add_handler(MessageHandler(Filters.command, start))
 
 print("🤖 Бот запущен")
-app.run_polling()
+updater.start_polling()
+updater.idle()
