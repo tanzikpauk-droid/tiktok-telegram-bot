@@ -3,7 +3,6 @@ import re
 import yt_dlp
 from telegram import Update
 from telegram.ext import ApplicationBuilder, MessageHandler, ContextTypes, filters
-import os
 
 TOKEN = os.getenv("BOT_TOKEN")
 
@@ -12,7 +11,7 @@ TIKTOK_REGEX = r"(https?://(www\.)?tiktok\.com/.+/video/\d+)"
 async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
     text = update.message.text
 
-    if not re.search(TIKTOK_REGEX, text):
+    if not text or not re.search(TIKTOK_REGEX, text):
         await update.message.reply_text("❌ Это не ссылка на TikTok видео")
         return
 
@@ -29,7 +28,9 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
             info = ydl.extract_info(text, download=True)
             filename = ydl.prepare_filename(info)
 
-        await update.message.reply_video(video=open(filename, "rb"))
+        with open(filename, "rb") as f:
+            await update.message.reply_video(video=f)
+
         os.remove(filename)
 
     except Exception as e:
